@@ -1,185 +1,127 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-TW">
 <head>
-  <meta charset="UTF-8" />
-  <title>英文發音練習｜衣服單字</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      text-align: center;
-      background: #f7f7f7;
-      padding: 20px;
-    }
-    h1 { margin-bottom: 5px; }
-    h2 { margin-top: 0; color: #555; }
-    .card {
-      background: white;
-      border-radius: 16px;
-      padding: 20px;
-      max-width: 400px;
-      margin: auto;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    }
-    .word {
-      font-size: 36px;
-      margin: 20px 0;
-    }
-    button {
-      font-size: 20px;
-      padding: 10px 16px;
-      margin: 8px;
-      border-radius: 12px;
-      border: none;
-      cursor: pointer;
-    }
-    .mic { background: #ff5252; color: white; }
-    .speak { background: #4caf50; color: white; }
-    .result { margin-top: 16px; font-size: 18px; }
-    .stars { font-size: 28px; margin-top: 8px; }
-  </style>
+<meta charset="UTF-8" />
+<title>英文字發音練習</title>
+<style>
+body {
+  font-family: system-ui, sans-serif;
+  background: #f5f7fb;
+  padding: 20px;
+}
+h1 { text-align: center; }
+.unit {
+  background: white;
+  padding: 16px;
+  margin: 12px auto;
+  max-width: 420px;
+  border-radius: 12px;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0,0,0,.1);
+}
+.wordCard {
+  background: white;
+  padding: 20px;
+  margin: 20px auto;
+  max-width: 420px;
+  border-radius: 12px;
+  box-shadow: 0 4px 10px rgba(0,0,0,.1);
+  text-align: center;
+}
+button {
+  padding: 10px 16px;
+  margin: 6px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.hidden { display: none; }
+</style>
 </head>
 <body>
 
-<h1>第一單元：衣服單字</h1>
-<h2>Clothes</h2>
-
-<div class="card">
-  <div class="word" id="wordText"></div>
-
-  <button class="speak" onclick="playTTS()">🔊 聽發音</button>
-  <button class="mic" onclick="startRecognition()">🎤 錄音</button>
-
-  <div class="result" id="resultText"></div>
-  <div class="stars" id="starsText"></div>
-</div>
-
-<audio id="successSound" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
-<audio id="failSound" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"></audio>
-<audio id="cheerSound" src="https://actions.google.com/sounds/v1/crowds/large_crowd_cheer.ogg"></audio>
+<h1 id="title">📚 選擇單元</h1>
+<div id="app"></div>
 
 <script>
-/* ===== 題庫（你以後只改這裡）===== */
-const words = [
-  { en: "sweater", zh: "毛衣" },
-  { en: "t-shirt", zh: "汗衫" },
-  { en: "shirt", zh: "襯衫" },
-  { en: "dress", zh: "洋裝" },
-  { en: "jacket", zh: "外套" }
+/* === 單字資料（直接來自你的 Sheet）=== */
+const data = [
+  {unit:1, title:"衣服（一）", en:"sweater", zh:"毛衣"},
+  {unit:1, title:"衣服（一）", en:"t-shirt", zh:"汗衫"},
+  {unit:1, title:"衣服（一）", en:"shirt", zh:"襯衫"},
+  {unit:1, title:"衣服（一）", en:"dress", zh:"洋裝"},
+  {unit:1, title:"衣服（一）", en:"jacket", zh:"外套"},
+
+  {unit:2, title:"衣服（二）", en:"scissors", zh:"剪刀"},
+  {unit:2, title:"衣服（二）", en:"jeans", zh:"牛仔褲"},
+  {unit:2, title:"衣服（二）", en:"glasses", zh:"眼鏡"},
+  {unit:2, title:"衣服（二）", en:"shorts", zh:"短褲"},
+  {unit:2, title:"衣服（二）", en:"pants", zh:"長褲（美式）"},
+  {unit:2, title:"衣服（二）", en:"shoes", zh:"鞋子"},
+  {unit:2, title:"衣服（二）", en:"trousers", zh:"長褲（英式）"}
 ];
 
-let currentIndex = 0;
+const app = document.getElementById("app");
 
-/* ===== 初始化 ===== */
-updateWord();
+/* === 單元選單 === */
+function showUnits() {
+  app.innerHTML = "";
+  document.getElementById("title").textContent = "📚 選擇單元";
 
-/* ===== 顯示目前題目 ===== */
-function updateWord() {
-  document.getElementById("wordText").innerText =
-    words[currentIndex].en + "（" + words[currentIndex].zh + "）";
-  document.getElementById("resultText").innerText = "";
-  document.getElementById("starsText").innerText = "";
+  const units = [...new Map(data.map(d => [d.unit, d.title]))];
+
+  units.forEach(([unit, title]) => {
+    const div = document.createElement("div");
+    div.className = "unit";
+    div.textContent = title;
+    div.onclick = () => startUnit(unit);
+    app.appendChild(div);
+  });
 }
 
-/* ===== 標準發音 ===== */
-function playTTS() {
-  const utter = new SpeechSynthesisUtterance(words[currentIndex].en);
-  utter.lang = "en-US";
-  speechSynthesis.speak(utter);
+/* === 單字卡 === */
+let words = [];
+let index = 0;
+
+function startUnit(unit) {
+  words = data.filter(d => d.unit === unit);
+  index = 0;
+  showWord();
 }
 
-/* ===== 語音辨識 ===== */
-function startRecognition() {
-  const SpeechRecognition =
-    window.SpeechRecognition || window.webkitSpeechRecognition;
-
-  if (!SpeechRecognition) {
-    alert("此裝置不支援語音辨識，請用 Safari");
+function showWord() {
+  if (index >= words.length) {
+    app.innerHTML = `
+      <div class="wordCard">
+        <h2>🎉 全部完成！</h2>
+        <button onclick="showUnits()">回單元</button>
+      </div>`;
     return;
   }
 
-  const recognition = new SpeechRecognition();
-  recognition.lang = "en-US";
-  recognition.interimResults = false;
-
-  recognition.onresult = (event) => {
-    const spoken = event.results[0][0].transcript.toLowerCase().trim();
-    evaluate(spoken);
-  };
-
-  recognition.start();
+  const w = words[index];
+  app.innerHTML = `
+    <div class="wordCard">
+      <h2>${w.en}</h2>
+      <p>${w.zh}</p>
+      <button onclick="speak('${w.en}')">🔊 聽發音</button><br/>
+      <button onclick="next()">下一個</button>
+    </div>`;
 }
 
-/* ===== 核心判斷 ===== */
-function evaluate(spoken) {
-  const answer = words[currentIndex].en.toLowerCase();
-
-  document.getElementById("resultText").innerText =
-    "我聽起來比較像： " + spoken;
-
-  /* ⭐ includes() 快速通過 */
-  if (spoken.includes(answer)) {
-    document.getElementById("starsText").innerText = "⭐⭐⭐";
-    document.getElementById("successSound").play();
-
-    setTimeout(nextWord, 1000);
-    return;
-  }
-
-  /* ⭐ 相似度 → 星星 */
-  const similarity = calcSimilarity(spoken, answer);
-
-  if (similarity >= 0.6) {
-    document.getElementById("starsText").innerText = "⭐⭐";
-  } else if (similarity >= 0.4) {
-    document.getElementById("starsText").innerText = "⭐";
-  } else {
-    document.getElementById("starsText").innerText = "❌ 再試一次";
-  }
-
-  document.getElementById("failSound").play();
+function speak(text) {
+  const u = new SpeechSynthesisUtterance(text);
+  u.lang = "en-US";
+  speechSynthesis.speak(u);
 }
 
-/* ===== 下一題 / 單元完成 ===== */
-function nextWord() {
-  currentIndex++;
-
-  if (currentIndex >= words.length) {
-    document.getElementById("wordText").innerText = "🎉 單元完成！";
-    document.getElementById("resultText").innerText = "太棒了！";
-    document.getElementById("starsText").innerText = "⭐⭐⭐";
-    document.getElementById("cheerSound").play();
-    return;
-  }
-
-  updateWord();
+function next() {
+  index++;
+  showWord();
 }
 
-/* ===== 文字相似度（Levenshtein）===== */
-function calcSimilarity(a, b) {
-  const matrix = Array.from({ length: a.length + 1 }, () =>
-    Array(b.length + 1).fill(0)
-  );
-
-  for (let i = 0; i <= a.length; i++) matrix[i][0] = i;
-  for (let j = 0; j <= b.length; j++) matrix[0][j] = j;
-
-  for (let i = 1; i <= a.length; i++) {
-    for (let j = 1; j <= b.length; j++) {
-      matrix[i][j] =
-        a[i - 1] === b[j - 1]
-          ? matrix[i - 1][j - 1]
-          : Math.min(
-              matrix[i - 1][j - 1] + 1,
-              matrix[i][j - 1] + 1,
-              matrix[i - 1][j] + 1
-            );
-    }
-  }
-
-  const distance = matrix[a.length][b.length];
-  return 1 - distance / Math.max(a.length, b.length);
-}
+/* === 啟動 === */
+showUnits();
 </script>
 
 </body>

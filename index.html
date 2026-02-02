@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
-  <title>發音練習｜Unit 1 衣服單字</title>
+  <title>發音練習｜第一單元：衣服</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <style>
@@ -15,14 +15,20 @@
     .card {
       background: white;
       border-radius: 16px;
-      padding: 40px 20px;
+      padding: 36px 20px;
       max-width: 420px;
       margin: auto;
       box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     }
+    .unit {
+      font-size: 20px;
+      color: #007aff;
+      margin-bottom: 10px;
+      font-weight: bold;
+    }
     h1 {
       font-size: 48px;
-      margin-bottom: 10px;
+      margin-bottom: 6px;
     }
     .zh {
       font-size: 20px;
@@ -36,15 +42,19 @@
       border-radius: 12px;
       background: #007aff;
       color: white;
+      margin: 6px;
+    }
+    .listen {
+      background: #34c759;
     }
     #result {
-      margin-top: 24px;
+      margin-top: 20px;
       font-size: 24px;
       font-weight: bold;
       min-height: 32px;
     }
     .progress {
-      margin-top: 16px;
+      margin-top: 12px;
       font-size: 16px;
       color: #888;
     }
@@ -53,14 +63,22 @@
 
 <body>
   <div class="card">
+    <div class="unit">第一單元：衣服</div>
+
     <h1 id="word"></h1>
     <div class="zh" id="zh"></div>
 
-    <button onclick="startListening()">🎤 按住說話</button>
+    <button class="listen" onclick="playExample()">🔊 聽示範發音</button><br>
+    <button onclick="startListening()">🎤 我來說</button>
 
     <div id="result"></div>
     <div class="progress" id="progress"></div>
   </div>
+
+  <!-- 音效 -->
+  <audio id="sound-correct" src="https://assets.mixkit.co/sfx/preview/mixkit-correct-answer-tone-2870.mp3"></audio>
+  <audio id="sound-wrong" src="https://assets.mixkit.co/sfx/preview/mixkit-wrong-answer-fail-notification-946.mp3"></audio>
+  <audio id="sound-finish" src="https://assets.mixkit.co/sfx/preview/mixkit-animated-small-group-applause-523.mp3"></audio>
 
   <script>
     /* ===== Unit 1：衣服單字 ===== */
@@ -84,6 +102,14 @@
         `第 ${currentIndex + 1} 題 / 共 ${words.length} 題`;
     }
 
+    /* 🔊 示範發音（系統 TTS） */
+    function playExample() {
+      const utterance = new SpeechSynthesisUtterance(words[currentIndex].en);
+      utterance.lang = "en-US";
+      speechSynthesis.speak(utterance);
+    }
+
+    /* 🎤 說話判斷 */
     function startListening() {
       const resultDiv = document.getElementById("result");
 
@@ -116,6 +142,7 @@
           .trim();
 
         if (spoken === answer) {
+          document.getElementById("sound-correct").play();
           resultDiv.innerText = "✅ 正確！";
           resultDiv.style.color = "green";
 
@@ -125,12 +152,14 @@
             if (currentIndex < words.length) {
               showWord();
             } else {
-              document.getElementById("word").innerText = "🎉 完成！";
-              document.getElementById("zh").innerText = "本單元結束";
+              document.getElementById("sound-finish").play();
+              document.getElementById("word").innerText = "🎉 太棒了！";
+              document.getElementById("zh").innerText = "第一單元完成";
               document.getElementById("progress").innerText = "";
             }
-          }, 800);
+          }, 900);
         } else {
+          document.getElementById("sound-wrong").play();
           resultDiv.innerText = "❌ 再試一次";
           resultDiv.style.color = "red";
         }
@@ -147,5 +176,3 @@
   </script>
 </body>
 </html>
-
-

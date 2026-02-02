@@ -2,10 +2,8 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
-
-  <!-- ✅ 關鍵：手機不縮小 -->
+  <!-- 手機/iPad 不縮小 -->
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
   <title>英文發音練習</title>
 
   <style>
@@ -25,10 +23,10 @@
     .unit-btn {
       display: block;
       width: 100%;
-      font-size: 22px;
+      font-size: 24px;
       padding: 18px;
       margin-bottom: 16px;
-      border-radius: 14px;
+      border-radius: 16px;
       border: none;
       background: #4f8cff;
       color: white;
@@ -36,35 +34,48 @@
 
     .card {
       background: white;
-      border-radius: 16px;
-      padding: 20px;
+      border-radius: 20px;
+      padding: 24px;
       margin-bottom: 20px;
       text-align: center;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      box-shadow: 0 6px 14px rgba(0,0,0,0.12);
     }
 
     .word {
-      font-size: 32px;
+      font-size: 36px;
       margin-bottom: 10px;
     }
 
     .zh {
-      font-size: 20px;
+      font-size: 22px;
       color: #666;
       margin-bottom: 16px;
     }
 
     button {
-      font-size: 20px;
-      padding: 14px 18px;
-      margin: 6px;
-      border-radius: 12px;
+      font-size: 22px;
+      padding: 16px 22px;
+      margin: 8px;
+      border-radius: 14px;
       border: none;
-      background: #ffcc00;
+    }
+
+    .listen {
+      background: #ffd54f;
+    }
+
+    .record {
+      background: #ff6b6b;
+      color: white;
     }
 
     .back {
       background: #ccc;
+    }
+
+    .result {
+      font-size: 22px;
+      margin-top: 12px;
     }
   </style>
 </head>
@@ -72,11 +83,10 @@
 <body>
 
 <h1 id="title">📚 選擇單元</h1>
-
 <div id="content"></div>
 
 <script>
-/* ====== 單字資料（之後可換成 Google Sheet） ====== */
+/* ===== 單字資料 ===== */
 const units = {
   1: {
     title: "衣服（一）",
@@ -103,7 +113,10 @@ const units = {
 const content = document.getElementById("content");
 const title = document.getElementById("title");
 
-/* ====== 主畫面：單元選單 ====== */
+let currentWords = [];
+let currentIndex = 0;
+
+/* ===== 主畫面 ===== */
 function showUnits() {
   title.textContent = "📚 選擇單元";
   content.innerHTML = "";
@@ -112,47 +125,91 @@ function showUnits() {
     const btn = document.createElement("button");
     btn.className = "unit-btn";
     btn.textContent = units[id].title;
-    btn.onclick = () => showUnit(id);
+    btn.onclick = () => startUnit(id);
     content.appendChild(btn);
   }
 }
 
-/* ====== 單元畫面 ====== */
-function showUnit(id) {
-  const unit = units[id];
-  title.textContent = unit.title;
-  content.innerHTML = "";
-
-  unit.words.forEach(word => {
-    const card = document.createElement("div");
-    card.className = "card";
-
-    card.innerHTML = `
-      <div class="word">${word.en}</div>
-      <div class="zh">${word.zh}</div>
-      <button onclick="speak('${word.en}')">🔊 聽發音</button>
-      <br>
-      <small>🎤 錄音功能（上線後啟用）</small>
-    `;
-
-    content.appendChild(card);
-  });
-
-  const backBtn = document.createElement("button");
-  backBtn.textContent = "⬅ 回單元選單";
-  backBtn.className = "back";
-  backBtn.onclick = showUnits;
-  content.appendChild(backBtn);
+/* ===== 單元開始 ===== */
+function startUnit(id) {
+  currentWords = units[id].words;
+  currentIndex = 0;
+  title.textContent = units[id].title;
+  showWord();
 }
 
-/* ====== 發音（TTS） ====== */
+/* ===== 顯示單字卡 ===== */
+function showWord() {
+  if (currentIndex >= currentWords.length) {
+    content.innerHTML = `
+      <div class="card">
+        <h2>🎉 全部完成！</h2>
+        <button class="back" onclick="showUnits()">回單元選單</button>
+      </div>`;
+    return;
+  }
+
+  const w = currentWords[currentIndex];
+
+  content.innerHTML = `
+    <div class="card">
+      <div class="word">${w.en}</div>
+      <div class="zh">${w.zh}</div>
+
+      <button class="listen" onclick="speak('${w.en}')">🔊 聽發音</button>
+      <br>
+      <button class="record" onclick="record('${w.en}')">🎤 我來說</button>
+
+      <div class="result" id="result"></div>
+    </div>`;
+}
+
+/* ===== TTS ===== */
 function speak(text) {
   const u = new SpeechSynthesisUtterance(text);
   u.lang = "en-US";
   speechSynthesis.speak(u);
 }
 
-/* ====== 啟動 ====== */
+/* ===== 錄音＋判斷 ===== */
+function record(answer) {
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  const resultEl = document.getElementById("result");
+
+  if (!SpeechRecognition) {
+    resultEl.textContent = "❌ 這個瀏覽器不能錄音";
+    return;
+  }
+
+  const rec = new SpeechRecognition();
+  rec.lang = "en-US";
+  rec.interimResults = false;
+  rec.maxAlternatives = 1;
+
+  resultEl.textContent = "🎧 正在聽你說話…";
+  rec.start();
+
+  rec.onresult = (e) => {
+    const spoken = e.results[0][0].transcript.toLowerCase();
+    const target = answer.toLowerCase();
+
+    if (spoken.includes(target)) {
+      resultEl.textContent = "✅ 很棒！";
+      currentIndex++;
+      setTimeout(showWord, 1000);
+    } else {
+      resultEl.textContent = `❌ 我聽到的是「${spoken}」`;
+    }
+  };
+
+  rec.onerror = () => {
+    resultEl.textContent = "❌ 沒聽清楚，再試一次";
+  };
+}
+
+/* ===== 啟動 ===== */
 showUnits();
 </script>
 

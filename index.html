@@ -141,7 +141,7 @@
           .toLowerCase()
           .trim();
 
-        if (spoken === answer) {
+        if (spoken.includes(answer)) {
           document.getElementById("sound-correct").play();
           resultDiv.innerText = "✅ 正確！";
           resultDiv.style.color = "green";

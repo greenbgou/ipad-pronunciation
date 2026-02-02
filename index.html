@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
   <meta charset="UTF-8">
-  <title>發音練習</title>
+  <title>發音練習｜Unit 1 衣服單字</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <style>
@@ -22,6 +22,11 @@
     }
     h1 {
       font-size: 48px;
+      margin-bottom: 10px;
+    }
+    .zh {
+      font-size: 20px;
+      color: #666;
       margin-bottom: 20px;
     }
     button {
@@ -36,19 +41,48 @@
       margin-top: 24px;
       font-size: 24px;
       font-weight: bold;
+      min-height: 32px;
+    }
+    .progress {
+      margin-top: 16px;
+      font-size: 16px;
+      color: #888;
     }
   </style>
 </head>
 
 <body>
   <div class="card">
-    <h1 id="word">apple</h1>
+    <h1 id="word"></h1>
+    <div class="zh" id="zh"></div>
+
     <button onclick="startListening()">🎤 按住說話</button>
+
     <div id="result"></div>
+    <div class="progress" id="progress"></div>
   </div>
 
   <script>
-    const correctWord = "apple";
+    /* ===== Unit 1：衣服單字 ===== */
+    const words = [
+      { en: "sweater", zh: "毛衣" },
+      { en: "t-shirt", zh: "汗衫" },
+      { en: "shirt", zh: "襯衫" },
+      { en: "dress", zh: "洋裝" },
+      { en: "jacket", zh: "夾克（外套）" },
+      { en: "skirt", zh: "裙子" },
+      { en: "scarf", zh: "圍巾" }
+    ];
+
+    let currentIndex = 0;
+
+    function showWord() {
+      document.getElementById("word").innerText = words[currentIndex].en;
+      document.getElementById("zh").innerText = words[currentIndex].zh;
+      document.getElementById("result").innerText = "";
+      document.getElementById("progress").innerText =
+        `第 ${currentIndex + 1} 題 / 共 ${words.length} 題`;
+    }
 
     function startListening() {
       const resultDiv = document.getElementById("result");
@@ -77,11 +111,25 @@
           .toLowerCase()
           .trim();
 
-        const answer = correctWord.toLowerCase().trim();
+        const answer = words[currentIndex].en
+          .toLowerCase()
+          .trim();
 
         if (spoken === answer) {
           resultDiv.innerText = "✅ 正確！";
           resultDiv.style.color = "green";
+
+          setTimeout(() => {
+            currentIndex++;
+
+            if (currentIndex < words.length) {
+              showWord();
+            } else {
+              document.getElementById("word").innerText = "🎉 完成！";
+              document.getElementById("zh").innerText = "本單元結束";
+              document.getElementById("progress").innerText = "";
+            }
+          }, 800);
         } else {
           resultDiv.innerText = "❌ 再試一次";
           resultDiv.style.color = "red";
@@ -93,9 +141,11 @@
         resultDiv.style.color = "red";
       };
     }
+
+    // 初始化
+    showWord();
   </script>
 </body>
 </html>
-
 
 

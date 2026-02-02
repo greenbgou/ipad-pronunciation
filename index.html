@@ -1,178 +1,186 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-  <meta charset="UTF-8">
-  <title>發音練習｜第一單元：衣服</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+  <meta charset="UTF-8" />
+  <title>英文發音練習｜衣服單字</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     body {
-      font-family: -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #f5f5f5;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       text-align: center;
-      padding: 40px 20px;
+      background: #f7f7f7;
+      padding: 20px;
     }
+    h1 { margin-bottom: 5px; }
+    h2 { margin-top: 0; color: #555; }
     .card {
       background: white;
       border-radius: 16px;
-      padding: 36px 20px;
-      max-width: 420px;
+      padding: 20px;
+      max-width: 400px;
       margin: auto;
       box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     }
-    .unit {
-      font-size: 20px;
-      color: #007aff;
-      margin-bottom: 10px;
-      font-weight: bold;
-    }
-    h1 {
-      font-size: 48px;
-      margin-bottom: 6px;
-    }
-    .zh {
-      font-size: 20px;
-      color: #666;
-      margin-bottom: 20px;
+    .word {
+      font-size: 36px;
+      margin: 20px 0;
     }
     button {
       font-size: 20px;
-      padding: 14px 24px;
-      border: none;
+      padding: 10px 16px;
+      margin: 8px;
       border-radius: 12px;
-      background: #007aff;
-      color: white;
-      margin: 6px;
+      border: none;
+      cursor: pointer;
     }
-    .listen {
-      background: #34c759;
-    }
-    #result {
-      margin-top: 20px;
-      font-size: 24px;
-      font-weight: bold;
-      min-height: 32px;
-    }
-    .progress {
-      margin-top: 12px;
-      font-size: 16px;
-      color: #888;
-    }
+    .mic { background: #ff5252; color: white; }
+    .speak { background: #4caf50; color: white; }
+    .result { margin-top: 16px; font-size: 18px; }
+    .stars { font-size: 28px; margin-top: 8px; }
   </style>
 </head>
-
 <body>
-  <div class="card">
-    <div class="unit">第一單元：衣服</div>
 
-    <h1 id="word"></h1>
-    <div class="zh" id="zh"></div>
+<h1>第一單元：衣服單字</h1>
+<h2>Clothes</h2>
 
-    <button class="listen" onclick="playExample()">🔊 聽示範發音</button><br>
-    <button onclick="startListening()">🎤 我來說</button>
+<div class="card">
+  <div class="word" id="wordText"></div>
 
-    <div id="result"></div>
-    <div class="progress" id="progress"></div>
-  </div>
+  <button class="speak" onclick="playTTS()">🔊 聽發音</button>
+  <button class="mic" onclick="startRecognition()">🎤 錄音</button>
 
-  <!-- 音效 -->
-  <audio id="sound-correct" src="https://assets.mixkit.co/sfx/preview/mixkit-correct-answer-tone-2870.mp3"></audio>
-  <audio id="sound-wrong" src="https://assets.mixkit.co/sfx/preview/mixkit-wrong-answer-fail-notification-946.mp3"></audio>
-  <audio id="sound-finish" src="https://assets.mixkit.co/sfx/preview/mixkit-animated-small-group-applause-523.mp3"></audio>
+  <div class="result" id="resultText"></div>
+  <div class="stars" id="starsText"></div>
+</div>
 
-  <script>
-    /* ===== Unit 1：衣服單字 ===== */
-    const words = [
-      { en: "sweater", zh: "毛衣" },
-      { en: "t-shirt", zh: "汗衫" },
-      { en: "shirt", zh: "襯衫" },
-      { en: "dress", zh: "洋裝" },
-      { en: "jacket", zh: "夾克（外套）" },
-      { en: "skirt", zh: "裙子" },
-      { en: "scarf", zh: "圍巾" }
-    ];
+<audio id="successSound" src="https://actions.google.com/sounds/v1/cartoon/clang_and_wobble.ogg"></audio>
+<audio id="failSound" src="https://actions.google.com/sounds/v1/cartoon/wood_plank_flicks.ogg"></audio>
+<audio id="cheerSound" src="https://actions.google.com/sounds/v1/crowds/large_crowd_cheer.ogg"></audio>
 
-    let currentIndex = 0;
+<script>
+/* ===== 題庫（你以後只改這裡）===== */
+const words = [
+  { en: "sweater", zh: "毛衣" },
+  { en: "t-shirt", zh: "汗衫" },
+  { en: "shirt", zh: "襯衫" },
+  { en: "dress", zh: "洋裝" },
+  { en: "jacket", zh: "外套" }
+];
 
-    function showWord() {
-      document.getElementById("word").innerText = words[currentIndex].en;
-      document.getElementById("zh").innerText = words[currentIndex].zh;
-      document.getElementById("result").innerText = "";
-      document.getElementById("progress").innerText =
-        `第 ${currentIndex + 1} 題 / 共 ${words.length} 題`;
+let currentIndex = 0;
+
+/* ===== 初始化 ===== */
+updateWord();
+
+/* ===== 顯示目前題目 ===== */
+function updateWord() {
+  document.getElementById("wordText").innerText =
+    words[currentIndex].en + "（" + words[currentIndex].zh + "）";
+  document.getElementById("resultText").innerText = "";
+  document.getElementById("starsText").innerText = "";
+}
+
+/* ===== 標準發音 ===== */
+function playTTS() {
+  const utter = new SpeechSynthesisUtterance(words[currentIndex].en);
+  utter.lang = "en-US";
+  speechSynthesis.speak(utter);
+}
+
+/* ===== 語音辨識 ===== */
+function startRecognition() {
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if (!SpeechRecognition) {
+    alert("此裝置不支援語音辨識，請用 Safari");
+    return;
+  }
+
+  const recognition = new SpeechRecognition();
+  recognition.lang = "en-US";
+  recognition.interimResults = false;
+
+  recognition.onresult = (event) => {
+    const spoken = event.results[0][0].transcript.toLowerCase().trim();
+    evaluate(spoken);
+  };
+
+  recognition.start();
+}
+
+/* ===== 核心判斷 ===== */
+function evaluate(spoken) {
+  const answer = words[currentIndex].en.toLowerCase();
+
+  document.getElementById("resultText").innerText =
+    "我聽起來比較像： " + spoken;
+
+  /* ⭐ includes() 快速通過 */
+  if (spoken.includes(answer)) {
+    document.getElementById("starsText").innerText = "⭐⭐⭐";
+    document.getElementById("successSound").play();
+
+    setTimeout(nextWord, 1000);
+    return;
+  }
+
+  /* ⭐ 相似度 → 星星 */
+  const similarity = calcSimilarity(spoken, answer);
+
+  if (similarity >= 0.6) {
+    document.getElementById("starsText").innerText = "⭐⭐";
+  } else if (similarity >= 0.4) {
+    document.getElementById("starsText").innerText = "⭐";
+  } else {
+    document.getElementById("starsText").innerText = "❌ 再試一次";
+  }
+
+  document.getElementById("failSound").play();
+}
+
+/* ===== 下一題 / 單元完成 ===== */
+function nextWord() {
+  currentIndex++;
+
+  if (currentIndex >= words.length) {
+    document.getElementById("wordText").innerText = "🎉 單元完成！";
+    document.getElementById("resultText").innerText = "太棒了！";
+    document.getElementById("starsText").innerText = "⭐⭐⭐";
+    document.getElementById("cheerSound").play();
+    return;
+  }
+
+  updateWord();
+}
+
+/* ===== 文字相似度（Levenshtein）===== */
+function calcSimilarity(a, b) {
+  const matrix = Array.from({ length: a.length + 1 }, () =>
+    Array(b.length + 1).fill(0)
+  );
+
+  for (let i = 0; i <= a.length; i++) matrix[i][0] = i;
+  for (let j = 0; j <= b.length; j++) matrix[0][j] = j;
+
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      matrix[i][j] =
+        a[i - 1] === b[j - 1]
+          ? matrix[i - 1][j - 1]
+          : Math.min(
+              matrix[i - 1][j - 1] + 1,
+              matrix[i][j - 1] + 1,
+              matrix[i - 1][j] + 1
+            );
     }
+  }
 
-    /* 🔊 示範發音（系統 TTS） */
-    function playExample() {
-      const utterance = new SpeechSynthesisUtterance(words[currentIndex].en);
-      utterance.lang = "en-US";
-      speechSynthesis.speak(utterance);
-    }
+  const distance = matrix[a.length][b.length];
+  return 1 - distance / Math.max(a.length, b.length);
+}
+</script>
 
-    /* 🎤 說話判斷 */
-    function startListening() {
-      const resultDiv = document.getElementById("result");
-
-      const SpeechRecognition =
-        window.SpeechRecognition || window.webkitSpeechRecognition;
-
-      if (!SpeechRecognition) {
-        resultDiv.innerText = "❌ 此瀏覽器不支援語音辨識";
-        resultDiv.style.color = "red";
-        return;
-      }
-
-      const recognition = new SpeechRecognition();
-      recognition.lang = "en-US";
-      recognition.interimResults = false;
-      recognition.maxAlternatives = 1;
-
-      resultDiv.innerText = "🎧 正在聽你說話…";
-      resultDiv.style.color = "#333";
-
-      recognition.start();
-
-      recognition.onresult = function (event) {
-        const spoken = event.results[0][0].transcript
-          .toLowerCase()
-          .trim();
-
-        const answer = words[currentIndex].en
-          .toLowerCase()
-          .trim();
-
-        if (spoken.includes(answer)) {
-          document.getElementById("sound-correct").play();
-          resultDiv.innerText = "✅ 正確！";
-          resultDiv.style.color = "green";
-
-          setTimeout(() => {
-            currentIndex++;
-
-            if (currentIndex < words.length) {
-              showWord();
-            } else {
-              document.getElementById("sound-finish").play();
-              document.getElementById("word").innerText = "🎉 太棒了！";
-              document.getElementById("zh").innerText = "第一單元完成";
-              document.getElementById("progress").innerText = "";
-            }
-          }, 900);
-        } else {
-          document.getElementById("sound-wrong").play();
-          resultDiv.innerText = "❌ 再試一次";
-          resultDiv.style.color = "red";
-        }
-      };
-
-      recognition.onerror = function () {
-        resultDiv.innerText = "❌ 沒有聽清楚，請再試一次";
-        resultDiv.style.color = "red";
-      };
-    }
-
-    // 初始化
-    showWord();
-  </script>
 </body>
 </html>

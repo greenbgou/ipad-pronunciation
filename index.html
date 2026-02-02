@@ -1,18 +1,20 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>英文發音練習</title>
 
 <style>
 body {
-  font-family: system-ui, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   background: #f5f7fb;
   margin: 0;
   padding: 20px;
   text-align: center;
 }
+
+h1 { font-size: 28px; }
 
 button {
   font-size: 20px;
@@ -20,6 +22,7 @@ button {
   margin: 8px;
   border-radius: 14px;
   border: none;
+  cursor: pointer;
 }
 
 .unit-btn {
@@ -34,11 +37,32 @@ button {
   padding: 30px;
   max-width: 420px;
   margin: 20px auto;
+  box-shadow: 0 8px 20px rgba(0,0,0,.08);
 }
 
 .word { font-size: 36px; font-weight: bold; }
-.zh { font-size: 24px; }
-.progress { font-size: 18px; color: #555; }
+.zh { font-size: 24px; margin-top: 6px; }
+
+.progress {
+  font-size: 18px;
+  color: #666;
+  margin-bottom: 10px;
+}
+
+.feedback {
+  font-size: 22px;
+  margin-top: 12px;
+}
+
+.recording {
+  color: red;
+  font-size: 20px;
+  margin-top: 10px;
+}
+
+.star {
+  font-size: 28px;
+}
 
 .back-btn { background: #eee; }
 </style>
@@ -53,33 +77,28 @@ button {
 <audio id="cheer" src="https://actions.google.com/sounds/v1/crowds/applause.ogg"></audio>
 
 <script>
-const SHEET_ID = "1q3_RdZns6MIOL_WYZdUArXi-cy-98VLsdXP3YEEKUeg";
-const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
+/* ===== 單字資料（目前可先這樣，之後可接 Sheet） ===== */
+const data = [
+  { unit: 1, title: "衣服（一）", en: "late", zh: "遲到的" },
+  { unit: 1, title: "衣服（一）", en: "sweater", zh: "毛衣" },
+  { unit: 1, title: "衣服（一）", en: "shirt", zh: "襯衫" },
 
-let allData = [];
+  { unit: 2, title: "衣服（二）", en: "jeans", zh: "牛仔褲" },
+  { unit: 2, title: "衣服（二）", en: "shorts", zh: "短褲" },
+  { unit: 2, title: "衣服（二）", en: "pants", zh: "長褲" }
+];
+
 let words = [];
 let index = 0;
 
-/* 讀取 Google Sheet */
-fetch(CSV_URL)
-  .then(r => r.text())
-  .then(text => {
-    const rows = text.split("\n").slice(1);
-    allData = rows.map(r => {
-      const [unit, title, en, zh, order] = r.split(",");
-      return { unit, title, en, zh, order };
-    });
-    showMenu();
-  });
-
+/* ===== 選單 ===== */
 function showMenu() {
+  document.getElementById("app").innerHTML = "";
   const menu = document.getElementById("unitMenu");
   menu.innerHTML = "";
 
-  const units = {};
-  allData.forEach(d => units[d.unit] = d.title);
-
-  Object.entries(units).forEach(([u, title]) => {
+  const units = [...new Map(data.map(d => [d.unit, d.title]))];
+  units.forEach(([u, title]) => {
     const btn = document.createElement("button");
     btn.className = "unit-btn";
     btn.textContent = title;
@@ -88,18 +107,21 @@ function showMenu() {
   });
 }
 
+/* ===== 開始單元 ===== */
 function startUnit(u) {
-  words = allData.filter(d => d.unit === u);
+  words = data.filter(d => d.unit === u);
   index = 0;
   document.getElementById("unitMenu").innerHTML = "";
   showCard();
 }
 
+/* ===== 顯示卡片 ===== */
 function showCard() {
   if (index >= words.length) {
     document.getElementById("app").innerHTML = `
       <h2>🎉 全部完成！</h2>
-      <button class="back-btn" onclick="location.reload()">🔙 回選單</button>
+      <div class="star">⭐⭐⭐⭐⭐</div>
+      <button class="back-btn" onclick="showMenu()">🔙 回到選單</button>
     `;
     document.getElementById("cheer").play();
     return;
@@ -109,38 +131,88 @@ function showCard() {
   document.getElementById("app").innerHTML = `
     <div class="card">
       <div class="progress">第 ${index+1} 題 / 共 ${words.length} 題</div>
+
       <div class="word">${w.en}</div>
       <div class="zh">${w.zh}</div>
 
       <button onclick="speak('${w.en}')">🔊 聽發音</button>
       <button onclick="record()">🎤 我來念</button>
-      <div id="result"></div>
 
-      <button onclick="next()">下一題</button><br/>
-      <button class="back-btn" onclick="location.reload()">🔙 回選單</button>
+      <div id="status"></div>
+      <div id="result" class="feedback"></div>
+
+      <button onclick="next()">下一題</button><br>
+      <button class="back-btn" onclick="showMenu()">🔙 回到選單</button>
     </div>
   `;
 }
 
+/* ===== 發音 ===== */
 function speak(t) {
+  speechSynthesis.cancel();
   speechSynthesis.speak(new SpeechSynthesisUtterance(t));
 }
 
+/* ===== 錄音＋評分 ===== */
 function record() {
-  const R = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const r = new R();
-  r.lang = "en-US";
-  r.start();
-  r.onresult = e => {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    alert("此裝置不支援語音辨識");
+    return;
+  }
+
+  const statusEl = document.getElementById("status");
+  const resultEl = document.getElementById("result");
+
+  const rec = new SpeechRecognition();
+  rec.lang = "en-US";
+
+  statusEl.innerHTML = `<div class="recording">🔴 錄音中…請說話</div>`;
+  resultEl.innerHTML = "";
+
+  rec.start();
+
+  rec.onresult = e => {
+    statusEl.innerHTML = "";
     const said = e.results[0][0].transcript.toLowerCase();
-    document.getElementById("result").innerText = "🗣️ 我聽起來像：" + said;
+    const answer = words[index].en.toLowerCase();
+
+    let stars = "⭐";
+    let msg = "💪 再試試看！";
+
+    if (said.includes(answer)) {
+      stars = "⭐⭐⭐";
+      msg = "🎉 你很棒！";
+    } else if (answer.includes(said) || similarity(said, answer) > 0.5) {
+      stars = "⭐⭐";
+      msg = "🙂 差一點，再試試看！";
+    }
+
+    resultEl.innerHTML = `
+      <div class="star">${stars}</div>
+      <div>${msg}</div>
+      <div>🗣 我聽起來像：${said}</div>
+    `;
   };
 }
 
+/* ===== 下一題 ===== */
 function next() {
   index++;
   showCard();
 }
+
+/* ===== 簡易相似度 ===== */
+function similarity(a, b) {
+  let same = 0;
+  for (let i = 0; i < Math.min(a.length, b.length); i++) {
+    if (a[i] === b[i]) same++;
+  }
+  return same / Math.max(a.length, b.length);
+}
+
+/* 初始 */
+showMenu();
 </script>
 
 </body>

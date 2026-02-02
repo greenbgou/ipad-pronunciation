@@ -46,17 +46,16 @@ button {
 .progress {
   font-size: 18px;
   color: #666;
-  margin-bottom: 10px;
-}
-
-.feedback {
-  font-size: 22px;
-  margin-top: 12px;
 }
 
 .recording {
   color: red;
   font-size: 20px;
+  margin: 10px 0;
+}
+
+.light {
+  font-size: 26px;
   margin-top: 10px;
 }
 
@@ -71,47 +70,55 @@ button {
 <body>
 
 <h1>📚 選擇單元</h1>
-<div id="unitMenu"></div>
+<div id="menu"></div>
 <div id="app"></div>
 
-<audio id="cheer" src="https://actions.google.com/sounds/v1/crowds/applause.ogg"></audio>
-
 <script>
-/* ===== 單字資料（目前可先這樣，之後可接 Sheet） ===== */
-const data = [
-  { unit: 1, title: "衣服（一）", en: "late", zh: "遲到的" },
-  { unit: 1, title: "衣服（一）", en: "sweater", zh: "毛衣" },
-  { unit: 1, title: "衣服（一）", en: "shirt", zh: "襯衫" },
+/* 🔗 換成你的 Google Sheet CSV */
+const SHEET_URL =
+  "https://docs.google.com/spreadsheets/d/1q3_RdZns6MIOL_WYZdUArXi-cy-98VLsdXP3YEEKUeg/gviz/tq?tqx=out:csv";
 
-  { unit: 2, title: "衣服（二）", en: "jeans", zh: "牛仔褲" },
-  { unit: 2, title: "衣服（二）", en: "shorts", zh: "短褲" },
-  { unit: 2, title: "衣服（二）", en: "pants", zh: "長褲" }
-];
-
+let allData = [];
 let words = [];
 let index = 0;
+
+/* ===== 載入 Google Sheet ===== */
+fetch(SHEET_URL)
+  .then(r => r.text())
+  .then(csv => {
+    const rows = csv.split("\n").slice(1);
+    allData = rows.map(r => {
+      const [unit, unitTitle, en, zh, order] =
+        r.split(",").map(s => s.replace(/"/g, ""));
+      return { unit, unitTitle, en, zh, order };
+    });
+    showMenu();
+  });
 
 /* ===== 選單 ===== */
 function showMenu() {
   document.getElementById("app").innerHTML = "";
-  const menu = document.getElementById("unitMenu");
+  const menu = document.getElementById("menu");
   menu.innerHTML = "";
 
-  const units = [...new Map(data.map(d => [d.unit, d.title]))];
-  units.forEach(([u, title]) => {
-    const btn = document.createElement("button");
-    btn.className = "unit-btn";
-    btn.textContent = title;
-    btn.onclick = () => startUnit(u);
-    menu.appendChild(btn);
+  const units = {};
+  allData.forEach(d => units[d.unit] = d.unitTitle);
+
+  Object.keys(units).forEach(u => {
+    const b = document.createElement("button");
+    b.className = "unit-btn";
+    b.textContent = units[u];
+    b.onclick = () => startUnit(u);
+    menu.appendChild(b);
   });
 }
 
 /* ===== 開始單元 ===== */
 function startUnit(u) {
-  words = data.filter(d => d.unit === u);
+  words = allData.filter(d => d.unit === u)
+                 .sort((a,b)=>a.order-b.order);
   index = 0;
-  document.getElementById("unitMenu").innerHTML = "";
+  document.getElementById("menu").innerHTML = "";
   showCard();
 }
 
@@ -121,9 +128,8 @@ function showCard() {
     document.getElementById("app").innerHTML = `
       <h2>🎉 全部完成！</h2>
       <div class="star">⭐⭐⭐⭐⭐</div>
-      <button class="back-btn" onclick="showMenu()">🔙 回到選單</button>
+      <button class="back-btn" onclick="showMenu()">🔙 回選單</button>
     `;
-    document.getElementById("cheer").play();
     return;
   }
 
@@ -139,56 +145,47 @@ function showCard() {
       <button onclick="record()">🎤 我來念</button>
 
       <div id="status"></div>
-      <div id="result" class="feedback"></div>
+      <div id="result"></div>
 
       <button onclick="next()">下一題</button><br>
-      <button class="back-btn" onclick="showMenu()">🔙 回到選單</button>
+      <button class="back-btn" onclick="showMenu()">🔙 回選單</button>
     </div>
   `;
 }
 
-/* ===== 發音 ===== */
+/* ===== TTS ===== */
 function speak(t) {
-  speechSynthesis.cancel();
   speechSynthesis.speak(new SpeechSynthesisUtterance(t));
 }
 
-/* ===== 錄音＋評分 ===== */
+/* ===== 錄音與評分 ===== */
 function record() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    alert("此裝置不支援語音辨識");
-    return;
-  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return alert("此裝置不支援語音辨識");
 
-  const statusEl = document.getElementById("status");
-  const resultEl = document.getElementById("result");
-
-  const rec = new SpeechRecognition();
+  const rec = new SR();
   rec.lang = "en-US";
 
-  statusEl.innerHTML = `<div class="recording">🔴 錄音中…請說話</div>`;
-  resultEl.innerHTML = "";
+  document.getElementById("status").innerHTML =
+    `<div class="recording">🔴 錄音中…</div>`;
+  document.getElementById("result").innerHTML = "";
 
   rec.start();
 
   rec.onresult = e => {
-    statusEl.innerHTML = "";
+    document.getElementById("status").innerHTML = "";
     const said = e.results[0][0].transcript.toLowerCase();
-    const answer = words[index].en.toLowerCase();
+    const ans = words[index].en.toLowerCase();
 
-    let stars = "⭐";
-    let msg = "💪 再試試看！";
-
-    if (said.includes(answer)) {
-      stars = "⭐⭐⭐";
-      msg = "🎉 你很棒！";
-    } else if (answer.includes(said) || similarity(said, answer) > 0.5) {
-      stars = "⭐⭐";
-      msg = "🙂 差一點，再試試看！";
+    let light="🔴", stars="⭐", msg="再試試看！";
+    if (said.includes(ans)) {
+      light="🟢"; stars="⭐⭐⭐"; msg="你很棒！";
+    } else if (similar(said, ans) > 0.5) {
+      light="🟡"; stars="⭐⭐"; msg="差一點，再試試看！";
     }
 
-    resultEl.innerHTML = `
+    document.getElementById("result").innerHTML = `
+      <div class="light">${light}</div>
       <div class="star">${stars}</div>
       <div>${msg}</div>
       <div>🗣 我聽起來像：${said}</div>
@@ -196,24 +193,14 @@ function record() {
   };
 }
 
-/* ===== 下一題 ===== */
-function next() {
-  index++;
-  showCard();
-}
+function next(){ index++; showCard(); }
 
-/* ===== 簡易相似度 ===== */
-function similarity(a, b) {
-  let same = 0;
-  for (let i = 0; i < Math.min(a.length, b.length); i++) {
-    if (a[i] === b[i]) same++;
-  }
-  return same / Math.max(a.length, b.length);
+function similar(a,b){
+  let s=0;
+  for(let i=0;i<Math.min(a.length,b.length);i++)
+    if(a[i]==b[i]) s++;
+  return s/Math.max(a.length,b.length);
 }
-
-/* 初始 */
-showMenu();
 </script>
-
 </body>
 </html>

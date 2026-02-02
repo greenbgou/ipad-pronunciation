@@ -1,129 +1,158 @@
 <!DOCTYPE html>
-<html lang="zh-TW">
-
+<html lang="zh-Hant">
 <head>
+  <meta charset="UTF-8">
 
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>英文字發音練習</title>
-<style>
-body {
-  font-family: system-ui, sans-serif;
-  background: #f5f7fb;
-  padding: 20px;
-}
-h1 { text-align: center; }
-.unit {
-  background: white;
-  padding: 16px;
-  margin: 12px auto;
-  max-width: 420px;
-  border-radius: 12px;
-  cursor: pointer;
-  box-shadow: 0 4px 10px rgba(0,0,0,.1);
-}
-.wordCard {
-  background: white;
-  padding: 20px;
-  margin: 20px auto;
-  max-width: 420px;
-  border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(0,0,0,.1);
-  text-align: center;
-}
-button {
-  padding: 10px 16px;
-  margin: 6px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-}
-.hidden { display: none; }
-</style>
+  <!-- ✅ 關鍵：手機不縮小 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>英文發音練習</title>
+
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      font-size: 20px;
+      margin: 0;
+      padding: 16px;
+      background: #f5f7fa;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .unit-btn {
+      display: block;
+      width: 100%;
+      font-size: 22px;
+      padding: 18px;
+      margin-bottom: 16px;
+      border-radius: 14px;
+      border: none;
+      background: #4f8cff;
+      color: white;
+    }
+
+    .card {
+      background: white;
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+      text-align: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    .word {
+      font-size: 32px;
+      margin-bottom: 10px;
+    }
+
+    .zh {
+      font-size: 20px;
+      color: #666;
+      margin-bottom: 16px;
+    }
+
+    button {
+      font-size: 20px;
+      padding: 14px 18px;
+      margin: 6px;
+      border-radius: 12px;
+      border: none;
+      background: #ffcc00;
+    }
+
+    .back {
+      background: #ccc;
+    }
+  </style>
 </head>
+
 <body>
 
 <h1 id="title">📚 選擇單元</h1>
-<div id="app"></div>
+
+<div id="content"></div>
 
 <script>
-/* === 單字資料（直接來自你的 Sheet）=== */
-const data = [
-  {unit:1, title:"衣服（一）", en:"sweater", zh:"毛衣"},
-  {unit:1, title:"衣服（一）", en:"t-shirt", zh:"汗衫"},
-  {unit:1, title:"衣服（一）", en:"shirt", zh:"襯衫"},
-  {unit:1, title:"衣服（一）", en:"dress", zh:"洋裝"},
-  {unit:1, title:"衣服（一）", en:"jacket", zh:"外套"},
-
-  {unit:2, title:"衣服（二）", en:"scissors", zh:"剪刀"},
-  {unit:2, title:"衣服（二）", en:"jeans", zh:"牛仔褲"},
-  {unit:2, title:"衣服（二）", en:"glasses", zh:"眼鏡"},
-  {unit:2, title:"衣服（二）", en:"shorts", zh:"短褲"},
-  {unit:2, title:"衣服（二）", en:"pants", zh:"長褲（美式）"},
-  {unit:2, title:"衣服（二）", en:"shoes", zh:"鞋子"},
-  {unit:2, title:"衣服（二）", en:"trousers", zh:"長褲（英式）"}
-];
-
-const app = document.getElementById("app");
-
-/* === 單元選單 === */
-function showUnits() {
-  app.innerHTML = "";
-  document.getElementById("title").textContent = "📚 選擇單元";
-
-  const units = [...new Map(data.map(d => [d.unit, d.title]))];
-
-  units.forEach(([unit, title]) => {
-    const div = document.createElement("div");
-    div.className = "unit";
-    div.textContent = title;
-    div.onclick = () => startUnit(unit);
-    app.appendChild(div);
-  });
-}
-
-/* === 單字卡 === */
-let words = [];
-let index = 0;
-
-function startUnit(unit) {
-  words = data.filter(d => d.unit === unit);
-  index = 0;
-  showWord();
-}
-
-function showWord() {
-  if (index >= words.length) {
-    app.innerHTML = `
-      <div class="wordCard">
-        <h2>🎉 全部完成！</h2>
-        <button onclick="showUnits()">回單元</button>
-      </div>`;
-    return;
+/* ====== 單字資料（之後可換成 Google Sheet） ====== */
+const units = {
+  1: {
+    title: "衣服（一）",
+    words: [
+      { en: "sweater", zh: "毛衣" },
+      { en: "t-shirt", zh: "汗衫" },
+      { en: "shirt", zh: "襯衫" },
+      { en: "dress", zh: "洋裝" },
+      { en: "jacket", zh: "外套" }
+    ]
+  },
+  2: {
+    title: "衣服（二）",
+    words: [
+      { en: "jeans", zh: "牛仔褲" },
+      { en: "shorts", zh: "短褲" },
+      { en: "pants", zh: "長褲" },
+      { en: "shoes", zh: "鞋子" },
+      { en: "glasses", zh: "眼鏡" }
+    ]
   }
+};
 
-  const w = words[index];
-  app.innerHTML = `
-    <div class="wordCard">
-      <h2>${w.en}</h2>
-      <p>${w.zh}</p>
-      <button onclick="speak('${w.en}')">🔊 聽發音</button><br/>
-      <button onclick="next()">下一個</button>
-    </div>`;
+const content = document.getElementById("content");
+const title = document.getElementById("title");
+
+/* ====== 主畫面：單元選單 ====== */
+function showUnits() {
+  title.textContent = "📚 選擇單元";
+  content.innerHTML = "";
+
+  for (const id in units) {
+    const btn = document.createElement("button");
+    btn.className = "unit-btn";
+    btn.textContent = units[id].title;
+    btn.onclick = () => showUnit(id);
+    content.appendChild(btn);
+  }
 }
 
+/* ====== 單元畫面 ====== */
+function showUnit(id) {
+  const unit = units[id];
+  title.textContent = unit.title;
+  content.innerHTML = "";
+
+  unit.words.forEach(word => {
+    const card = document.createElement("div");
+    card.className = "card";
+
+    card.innerHTML = `
+      <div class="word">${word.en}</div>
+      <div class="zh">${word.zh}</div>
+      <button onclick="speak('${word.en}')">🔊 聽發音</button>
+      <br>
+      <small>🎤 錄音功能（上線後啟用）</small>
+    `;
+
+    content.appendChild(card);
+  });
+
+  const backBtn = document.createElement("button");
+  backBtn.textContent = "⬅ 回單元選單";
+  backBtn.className = "back";
+  backBtn.onclick = showUnits;
+  content.appendChild(backBtn);
+}
+
+/* ====== 發音（TTS） ====== */
 function speak(text) {
   const u = new SpeechSynthesisUtterance(text);
   u.lang = "en-US";
   speechSynthesis.speak(u);
 }
 
-function next() {
-  index++;
-  showWord();
-}
-
-/* === 啟動 === */
+/* ====== 啟動 ====== */
 showUnits();
 </script>
 

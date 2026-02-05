@@ -18,8 +18,8 @@ h1 { font-size: 28px; }
 
 button {
   font-size: 20px;
-  padding: 14px 20px;
-  margin: 8px;
+  padding: 14px 18px;
+  margin: 6px;
   border-radius: 14px;
   border: none;
   cursor: pointer;
@@ -34,7 +34,7 @@ button {
 .card {
   background: white;
   border-radius: 20px;
-  padding: 30px;
+  padding: 28px;
   max-width: 420px;
   margin: 20px auto;
   box-shadow: 0 8px 20px rgba(0,0,0,.08);
@@ -49,6 +49,7 @@ button {
 .light { font-size: 26px; }
 
 .back-btn { background: #eee; }
+.nav-btn { background: #ddd; }
 </style>
 </head>
 
@@ -63,7 +64,7 @@ button {
 const SHEET_URL =
 "https://docs.google.com/spreadsheets/d/1q3_RdZns6MIOL_WYZdUArXi-cy-98VLsdXP3YEEKUeg/gviz/tq?tqx=out:json";
 
-/* ===== 同音容忍清單（只影響短字，可自行加） ===== */
+/* ===== 同音容忍清單（只影響短字）===== */
 const phoneticFriends = {
   tea: ["tee","t"],
   tree: ["three"],
@@ -116,7 +117,7 @@ function startUnit(u){
   showCard();
 }
 
-/* ===== 顯示單字卡 ===== */
+/* ===== 顯示題目 ===== */
 function showCard(){
   if (index >= words.length) {
     showReport();
@@ -136,7 +137,11 @@ function showCard(){
       <div id="status"></div>
       <div id="result"></div>
 
-      <button onclick="next()">下一題</button><br>
+      <div>
+        <button class="nav-btn" onclick="prev()">⬅️ 上一題</button>
+        <button class="nav-btn" onclick="next()">下一題 ➡️</button>
+      </div>
+
       <button class="back-btn" onclick="showMenu()">🔙 回單元選單</button>
     </div>
   `;
@@ -179,10 +184,10 @@ function record(){
       level="yellow"; light="🟡"; stars="⭐⭐"; msg="差一點，再試試看！";
     }
 
-    const prev = results[answer];
-    if (!prev ||
-        (prev==="red" && level!=="red") ||
-        (prev==="yellow" && level==="green")) {
+    const prevLevel = results[answer];
+    if (!prevLevel ||
+        (prevLevel==="red" && level!=="red") ||
+        (prevLevel==="yellow" && level==="green")) {
       results[answer] = level;
     }
 
@@ -195,7 +200,8 @@ function record(){
   };
 }
 
-function next(){ index++; showCard(); }
+function next(){ if (index < words.length) { index++; showCard(); } }
+function prev(){ if (index > 0) { index--; showCard(); } }
 
 /* ===== 單元結果統整 ===== */
 function showReport(){

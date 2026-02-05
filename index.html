@@ -54,7 +54,7 @@ button {
 
 <body>
 
-<h1>📚 選擇單元</h1>
+<h1 id="title">📚 選擇單元</h1>
 <div id="menu"></div>
 <div id="app"></div>
 
@@ -63,7 +63,7 @@ button {
 const SHEET_URL =
 "https://docs.google.com/spreadsheets/d/你的SheetID/gviz/tq?tqx=out:json";
 
-/* ===== 同音容忍清單（可自己加）===== */
+/* ===== 同音容忍清單（只影響短字，可自行加） ===== */
 const phoneticFriends = {
   tea: ["tee","t"],
   tree: ["three"],
@@ -72,7 +72,6 @@ const phoneticFriends = {
   pete: ["peat","beat"]
 };
 
-let allData = [];
 let units = {};
 let words = [];
 let index = 0;
@@ -91,11 +90,13 @@ fetch(SHEET_URL)
     showMenu();
   });
 
-/* ===== 選單 ===== */
+/* ===== 單元總覽 ===== */
 function showMenu(){
+  document.getElementById("title").textContent = "📚 選擇單元";
   document.getElementById("app").innerHTML = "";
   const menu = document.getElementById("menu");
   menu.innerHTML = "";
+
   Object.keys(units).forEach(u => {
     const b = document.createElement("button");
     b.className = "unit-btn";
@@ -111,15 +112,17 @@ function startUnit(u){
   index = 0;
   results = {};
   document.getElementById("menu").innerHTML = "";
+  document.getElementById("title").textContent = units[u].title;
   showCard();
 }
 
-/* ===== 顯示題目 ===== */
+/* ===== 顯示單字卡 ===== */
 function showCard(){
   if (index >= words.length) {
     showReport();
     return;
   }
+
   const w = words[index];
   document.getElementById("app").innerHTML = `
     <div class="card">
@@ -134,7 +137,7 @@ function showCard(){
       <div id="result"></div>
 
       <button onclick="next()">下一題</button><br>
-      <button class="back-btn" onclick="showMenu()">🔙 回選單</button>
+      <button class="back-btn" onclick="showMenu()">🔙 回單元選單</button>
     </div>
   `;
 }
@@ -145,7 +148,7 @@ function speak(t){
   speechSynthesis.speak(new SpeechSynthesisUtterance(t));
 }
 
-/* ===== 錄音＋判斷（已修正）===== */
+/* ===== 錄音＋判斷 ===== */
 function record(){
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   if (!SR) return alert("此裝置不支援語音辨識");
@@ -164,7 +167,7 @@ function record(){
     const said = e.results[0][0].transcript.toLowerCase().trim();
     const answer = words[index].en.toLowerCase().trim();
 
-    let level = "red", light="🔴", stars="⭐", msg="再試試看！";
+    let level="red", light="🔴", stars="⭐", msg="再試試看！";
 
     if (said.includes(answer)) {
       level="green"; light="🟢"; stars="⭐⭐⭐"; msg="你很棒！";
@@ -194,23 +197,23 @@ function record(){
 
 function next(){ index++; showCard(); }
 
-/* ===== 統整頁（已修正 key）===== */
+/* ===== 單元結果統整 ===== */
 function showReport(){
   document.getElementById("app").innerHTML = `
     <div class="card">
-      <h2>📊 本單元結果</h2>
+      <h2>📊 本單元學習結果</h2>
       ${words.map(w=>{
         const key = w.en.toLowerCase().trim();
         const r = results[key] || "red";
         const icon = r==="green"?"🟢":r==="yellow"?"🟡":"🔴";
         return `<div>${icon} ${w.en}（${w.zh}）</div>`;
       }).join("")}
-      <button class="back-btn" onclick="showMenu()">🔙 回選單</button>
+      <button class="back-btn" onclick="showMenu()">🔙 回單元選單</button>
     </div>
   `;
 }
 
-/* ===== 相似度（只給長字用）===== */
+/* ===== 相似度（只給長字）===== */
 function similarity(a,b){
   let s=0;
   for(let i=0;i<Math.min(a.length,b.length);i++)

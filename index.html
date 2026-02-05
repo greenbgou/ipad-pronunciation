@@ -1,183 +1,221 @@
 <!DOCTYPE html>
 <html lang="zh-Hant">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>英文發音練習</title>
 
 <style>
 body {
-  font-family: "Noto Sans TC", sans-serif;
-  background: #f5f5f5;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #f5f7fb;
   margin: 0;
-}
-#app {
-  max-width: 480px;
-  margin: auto;
-  padding: 16px;
-}
-.card {
-  background: white;
-  border-radius: 16px;
   padding: 20px;
-  margin-top: 16px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  text-align: center;
 }
+
+h1 { font-size: 28px; }
+
 button {
   font-size: 20px;
-  padding: 12px;
-  margin: 8px 0;
-  width: 100%;
-  border-radius: 12px;
+  padding: 14px 20px;
+  margin: 8px;
+  border-radius: 14px;
   border: none;
+  cursor: pointer;
 }
-.primary { background: #4caf50; color: white; }
-.secondary { background: #2196f3; color: white; }
-.gray { background: #ccc; }
+
+.unit-btn {
+  width: 90%;
+  background: #5b8cff;
+  color: white;
+}
+
+.card {
+  background: white;
+  border-radius: 20px;
+  padding: 30px;
+  max-width: 420px;
+  margin: 20px auto;
+  box-shadow: 0 8px 20px rgba(0,0,0,.08);
+}
+
+.word { font-size: 36px; font-weight: bold; }
+.zh { font-size: 24px; margin-top: 6px; }
+
+.progress { font-size: 18px; color: #666; }
+.recording { color: red; font-size: 20px; margin: 10px 0; }
+.star { font-size: 28px; }
+.light { font-size: 26px; }
+
+.back-btn { background: #eee; }
 </style>
 </head>
 
 <body>
-<div id="app">載入中…</div>
+
+<h1>📚 選擇單元</h1>
+<div id="menu"></div>
+<div id="app"></div>
 
 <script>
-/* ========= 設定 ========= */
+/* 🔗 換成你的 Google Sheet ID */
 const SHEET_URL =
-"https://docs.google.com/spreadsheets/d/1q3_RdZns6MIOL_WYZdUArXi-cy-98VLsdXP3YEEKUeg/gviz/tq?tqx=out:json";
+"https://docs.google.com/spreadsheets/d/你的SheetID/gviz/tq?tqx=out:json";
 
+/* ===== 同音容忍清單（可自己加）===== */
+const phoneticFriends = {
+  tea: ["tee","t"],
+  tree: ["three"],
+  rain: ["ran","ray"],
+  pay: ["bay","play"],
+  pete: ["peat","beat"]
+};
 
-
-
-/* ========= 全域狀態 ========= */
-let data = [];
+let allData = [];
 let units = {};
-let currentUnit = null;
+let words = [];
 let index = 0;
 let results = {};
 
-/* ========= 工具 ========= */
-function speak(text){
-  const u = new SpeechSynthesisUtterance(text);
-  u.lang = "en-US";
-  speechSynthesis.speak(u);
-}
-
-function similarity(a,b){
-  let same = 0;
-  for(let i=0;i<Math.min(a.length,b.length);i++){
-    if(a[i]===b[i]) same++;
-  }
-  return same / b.length;
-}
-
-/* ========= 載入 Sheet ========= */
+/* ===== 載入 Google Sheet ===== */
 fetch(SHEET_URL)
-.then(r=>r.text())
-.then(t=>{
-  const json = JSON.parse(t.substring(47).slice(0,-2));
-  json.table.rows.forEach(r=>{
-    const [unit,unitTitle,en,zh,order] = r.c.map(c=>c.v);
-    if(!units[unit]){
-      units[unit]={title:unitTitle,words:[]};
-    }
-    units[unit].words.push({en,zh});
+  .then(r => r.text())
+  .then(t => {
+    const json = JSON.parse(t.substring(47).slice(0,-2));
+    json.table.rows.forEach(r => {
+      const [unit, unitTitle, en, zh, order] = r.c.map(c => c.v);
+      if (!units[unit]) units[unit] = { title: unitTitle, words: [] };
+      units[unit].words.push({ en, zh, order });
+    });
+    showMenu();
   });
-  showMenu();
-});
 
-/* ========= 選單 ========= */
+/* ===== 選單 ===== */
 function showMenu(){
-  document.getElementById("app").innerHTML = `
-    <div class="card">
-      <h2>📚 單元選擇</h2>
-      ${Object.keys(units).map(u=>`
-        <button class="primary" onclick="startUnit(${u})">
-          ${units[u].title}
-        </button>
-      `).join("")}
-    </div>
-  `;
+  document.getElementById("app").innerHTML = "";
+  const menu = document.getElementById("menu");
+  menu.innerHTML = "";
+  Object.keys(units).forEach(u => {
+    const b = document.createElement("button");
+    b.className = "unit-btn";
+    b.textContent = units[u].title;
+    b.onclick = () => startUnit(u);
+    menu.appendChild(b);
+  });
 }
 
-/* ========= 單元 ========= */
+/* ===== 開始單元 ===== */
 function startUnit(u){
-  currentUnit = units[u];
+  words = units[u].words.sort((a,b)=>a.order-b.order);
   index = 0;
   results = {};
-  showWord();
+  document.getElementById("menu").innerHTML = "";
+  showCard();
 }
 
-/* ========= 題目 ========= */
-function showWord(){
-  if(index >= currentUnit.words.length){
+/* ===== 顯示題目 ===== */
+function showCard(){
+  if (index >= words.length) {
     showReport();
     return;
   }
-  const w = currentUnit.words[index];
+  const w = words[index];
   document.getElementById("app").innerHTML = `
     <div class="card">
-      <h3>${currentUnit.title}</h3>
-      <h1>${w.en}</h1>
-      <p>${w.zh}</p>
+      <div class="progress">第 ${index+1} 題 / 共 ${words.length} 題</div>
+      <div class="word">${w.en}</div>
+      <div class="zh">${w.zh}</div>
 
-      <button class="secondary" onclick="speak('${w.en}')">🔊 聽發音</button>
-      <button class="primary" onclick="record()">🎤 我來念</button>
+      <button onclick="speak('${w.en}')">🔊 聽發音</button>
+      <button onclick="record()">🎤 我來念</button>
 
       <div id="status"></div>
+      <div id="result"></div>
 
-      <button class="gray" onclick="index++;showWord()">下一題</button>
-      <button class="gray" onclick="showMenu()">回選單</button>
+      <button onclick="next()">下一題</button><br>
+      <button class="back-btn" onclick="showMenu()">🔙 回選單</button>
     </div>
   `;
 }
 
-/* ========= 錄音 ========= */
+/* ===== 發音 ===== */
+function speak(t){
+  speechSynthesis.cancel();
+  speechSynthesis.speak(new SpeechSynthesisUtterance(t));
+}
+
+/* ===== 錄音＋判斷（已修正）===== */
 function record(){
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) return alert("此裝置不支援語音辨識");
+
   const rec = new SR();
   rec.lang = "en-US";
+
+  document.getElementById("status").innerHTML =
+    `<div class="recording">🔴 錄音中…</div>`;
+  document.getElementById("result").innerHTML = "";
+
   rec.start();
 
-  document.getElementById("status").innerHTML = "🎙 錄音中…";
+  rec.onresult = e => {
+    document.getElementById("status").innerHTML = "";
+    const said = e.results[0][0].transcript.toLowerCase().trim();
+    const answer = words[index].en.toLowerCase().trim();
 
-  rec.onresult = e=>{
-    const said = e.results[0][0].transcript.toLowerCase();
-    const ans = currentUnit.words[index].en.toLowerCase();
+    let level = "red", light="🔴", stars="⭐", msg="再試試看！";
 
-    let stars="⭐", msg="💪 再試試看！", level="red";
-
-    if(said.includes(ans)){
-      stars="⭐⭐⭐"; msg="🎉 你很棒！"; level="green";
-    }else if(similarity(said,ans)>0.5){
-      stars="⭐⭐"; msg="🙂 差一點，再試試看！"; level="yellow";
+    if (said.includes(answer)) {
+      level="green"; light="🟢"; stars="⭐⭐⭐"; msg="你很棒！";
+    }
+    else if (
+      phoneticFriends[answer]?.includes(said) ||
+      (answer.length >= 5 && similarity(said,answer) > 0.5)
+    ) {
+      level="yellow"; light="🟡"; stars="⭐⭐"; msg="差一點，再試試看！";
     }
 
-    const prev = results[ans];
-    if(!prev || (prev==="red" && level!=="red") || (prev==="yellow" && level==="green")){
-      results[ans]=level;
+    const prev = results[answer];
+    if (!prev ||
+        (prev==="red" && level!=="red") ||
+        (prev==="yellow" && level==="green")) {
+      results[answer] = level;
     }
 
-    document.getElementById("status").innerHTML = `
-      <h2>${stars}</h2>
-      <p>${msg}</p>
-      <p>🗣 我聽起來像：${said}</p>
+    document.getElementById("result").innerHTML = `
+      <div class="light">${light}</div>
+      <div class="star">${stars}</div>
+      <div>${msg}</div>
+      <div>🗣 我聽起來像：${said}</div>
     `;
   };
 }
 
-/* ========= 報告 ========= */
+function next(){ index++; showCard(); }
+
+/* ===== 統整頁（已修正 key）===== */
 function showReport(){
   document.getElementById("app").innerHTML = `
     <div class="card">
       <h2>📊 本單元結果</h2>
-      ${currentUnit.words.map(w=>{
-        const r = results[w.en]||"red";
+      ${words.map(w=>{
+        const key = w.en.toLowerCase().trim();
+        const r = results[key] || "red";
         const icon = r==="green"?"🟢":r==="yellow"?"🟡":"🔴";
         return `<div>${icon} ${w.en}（${w.zh}）</div>`;
       }).join("")}
-      <button class="primary" onclick="showMenu()">回選單</button>
+      <button class="back-btn" onclick="showMenu()">🔙 回選單</button>
     </div>
   `;
+}
+
+/* ===== 相似度（只給長字用）===== */
+function similarity(a,b){
+  let s=0;
+  for(let i=0;i<Math.min(a.length,b.length);i++)
+    if(a[i]===b[i]) s++;
+  return s/Math.max(a.length,b.length);
 }
 </script>
 </body>
